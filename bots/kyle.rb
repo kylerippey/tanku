@@ -1,5 +1,5 @@
-class KyleBot < RTanque::Bot::Brain
-  NAME = 'kyle_bot'
+class Kyle < RTanque::Bot::Brain
+  NAME = 'kyle'
   include RTanque::Bot::BrainHelper
 
   @last_position = nil
@@ -22,7 +22,7 @@ class KyleBot < RTanque::Bot::Brain
 
   def drive
     command.speed = 10
-    rotate_tank
+    rotate_tank(3)
   end
 
   def seek
@@ -34,27 +34,29 @@ class KyleBot < RTanque::Bot::Brain
         last_target_heading = target_history[:heading]
         # We had a target and we lost it.
         # Should we search left or right?
-
         diff = sensors.radar_heading.delta(last_target_heading)
-
-        if diff > 0.0
-          @rotation_rate = 3
-        else
-          @rotation_rate = -3
-        end
+        @rotation_rate = (diff > 0.0 ? 4 : -4)
       end
 
-      @rotation_rate ||= -3
+      @rotation_rate ||= -4
       rotate_turret_and_radar(@rotation_rate)
+    end
+  end
+
+  def fire_power_control
+    if target && target.distance < 100
+      3.0
+    else
+      10.0
     end
   end
 
   def destroy
     if target
-      if target.distance < 100
-        command.fire(3)
-      else
-        command.fire(10)
+      # Make sure we don't waste shots by firing before our turret can come around
+      diff = sensors.turret_heading.delta(predicted_target_heading).abs
+      if diff < 6.0 * RTanque::Heading::ONE_DEGREE
+        command.fire(fire_power_control)
       end
     end
   end
@@ -85,11 +87,11 @@ class KyleBot < RTanque::Bot::Brain
         target_path = last_target_position.heading(new_target_position)
         distance_traveled = last_target_position.distance(new_target_position)
 
-        number_of_ticks = target.distance / 10.0 / 2
+        number_of_ticks = target.distance / fire_power_control / Math::PI
 
-        future_position = calculate_position(last_target_position, target_path, distance_traveled * number_of_ticks)
-
-        RTanque::Heading.new_between_points(sensors.position, future_position)
+        future_target_position = calculate_position(last_target_position, target_path, distance_traveled * number_of_ticks)
+        our_future_position = calculate_position(sensors.position, sensors.heading, sensors.speed)
+        our_future_position.heading(future_target_position)
       else
         target.heading
       end
