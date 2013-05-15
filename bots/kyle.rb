@@ -2,9 +2,6 @@ class Kyle < RTanque::Bot::Brain
   NAME = 'kyle'
   include RTanque::Bot::BrainHelper
 
-  @last_position = nil
-  @last_heading = nil
-
   def tick!
     ## main logic goes here
     drive
@@ -22,7 +19,7 @@ class Kyle < RTanque::Bot::Brain
 
   def drive
     command.speed = 10
-    rotate_tank(3)
+    rotate_tank(4)
   end
 
   def seek
@@ -31,9 +28,8 @@ class Kyle < RTanque::Bot::Brain
       command.turret_heading = predicted_target_heading
     else
       if target_history
+        # We had a target and we lost it. Search left or right?
         last_target_heading = target_history[:heading]
-        # We had a target and we lost it.
-        # Should we search left or right?
         diff = sensors.radar_heading.delta(last_target_heading)
         @rotation_rate = (diff > 0.0 ? 4 : -4)
       end
