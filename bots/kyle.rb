@@ -1,93 +1,147 @@
-class MyFirstBot < RTanque::Bot::Brain
-  NAME = 'kyle'
+class KyleBot < RTanque::Bot::Brain
+  NAME = 'kyle_bot'
   include RTanque::Bot::BrainHelper
+
+  @last_position = nil
+  @last_heading = nil
 
   def tick!
     ## main logic goes here
-    self.drive
+    drive
 
-    self.seek
+    seek
 
-    self.target
+    destroy
 
-    self.destroy
+    record_target_history
 
-    self.print_info
+    #print_info
   end
 
+  protected
+
   def drive
-    command.speed = 100
+    command.speed = 10
     rotate_tank
   end
 
   def seek
-    if self.sensors.radar.count > 0
-      command.radar_heading = self.sensors.radar.first.heading
+    if target
+      command.radar_heading = target.heading
+      command.turret_heading = predicted_target_heading
     else
-      rotate_radar(3)
-      command.turret_heading = RTanque::Heading.new_from_degrees(self.radar_degrees)
-    end
-  end
+      if target_history
+        last_target_heading = target_history[:heading]
+        # We had a target and we lost it.
+        # Should we search left or right?
 
-  def target
-    if self.sensors.radar.count > 0
-      command.turret_heading = self.sensors.radar.first.heading
+        diff = sensors.radar_heading.delta(last_target_heading)
+
+        if diff > 0.0
+          @rotation_rate = 3
+        else
+          @rotation_rate = -3
+        end
+      end
+
+      @rotation_rate ||= -3
+      rotate_turret_and_radar(@rotation_rate)
     end
   end
 
   def destroy
-    #self.command.fire_power = 0.1
-    #self.command.fire if self.sensors.gun_energy > 9
-    #self.command.fire_power = (rand(20) == 1 ? 5.0 : 1.0)
-    self.command.fire if self.sensors.radar.count > 0 && self.sensors.gun_energy.to_f > 9.5
+    if target
+      if target.distance < 100
+        command.fire(3)
+      else
+        command.fire(10)
+      end
+    end
   end
 
   def print_info
-    puts "Radar Degrees: #{self.radar_degrees}"
-    puts "Turret Degrees: #{self.turret_degrees}"
-    puts "Gun Energy: #{self.sensors.gun_energy}"
+    puts "----- System Status -----"
+    puts "Position: #{sensors.position.x}, #{sensors.position.y}"
+    puts "Heading: #{sensors.heading.to_degrees}"
+    puts "Radar Heading: #{sensors.radar_heading.to_degrees}"
+    puts "Turret Heading: #{sensors.turret_heading.to_degrees}"
+    puts "Gun Energy: #{sensors.gun_energy}"
+    if target
+      puts "\t----- Current Target -----"
+      puts "\tName: #{target.name}"
+      puts "\tDistance #{target.distance}"
+      puts "\tHeading: #{target.heading.to_degrees}"
+      puts "\tPosition: #{target_position.x}, #{target_position.y}"
+    end
     puts ""
   end
 
-  def rotate_radar(rotation=1)
-    self.radar_degrees = self.radar_degrees + rotation
-    command.radar_heading = RTanque::Heading.new_from_degrees(self.radar_degrees)
+  def predicted_target_heading
+    if target
+      if target_history
+        last_target_position = target_history[:position]
+        new_target_position = target_position
+
+        target_path = last_target_position.heading(new_target_position)
+        distance_traveled = last_target_position.distance(new_target_position)
+
+        number_of_ticks = target.distance / 10.0 / 2
+
+        future_position = calculate_position(last_target_position, target_path, distance_traveled * number_of_ticks)
+
+        RTanque::Heading.new_between_points(sensors.position, future_position)
+      else
+        target.heading
+      end
+    end
+  end
+
+  def target
+    sensors.radar.first
+  end
+
+  def target_history
+    @target_history
+  end
+
+  def record_target_history
+    if target
+      @target_history = {:name => target.name, :distance => target.distance, :heading => target.heading, :position => target_position}
+    else
+      @target_history = nil
+    end
+  end
+
+  def target_position
+    if target
+      calculate_position(sensors.position, target.heading, target.distance)
+    else
+      nil
+    end
+  end
+
+  def calculate_position(initial_position, heading, distance)
+    RTanque::Point.new(
+      initial_position.x + Math.sin(heading) * distance,
+      initial_position.y + Math.cos(heading) * distance,
+      self.arena
+    )
+  end
+
+  def rotate_turret_and_radar(rotation=1)
+    rotate_turret(rotation)
+    rotate_radar(rotation)
   end
 
   def rotate_tank(rotation=1)
-    self.tank_degrees = self.tank_degrees + rotation
-    command.heading = RTanque::Heading.new_from_degrees(self.tank_degrees)
-  end
-
-  def tank_degrees
-    @tank_degrees ||= 0
-  end
-
-  def tank_degrees=(value)
-    value -= 360 if value > 360
-    @tank_degrees = value
-  end
-
-  def radar_degrees
-    @radar_degrees ||= 0
-  end
-
-  def radar_degrees=(value)
-    value -= 360 if value > 360
-    @radar_degrees = value
+    command.heading = sensors.heading + RTanque::Heading.new_from_degrees(rotation)
   end
 
   def rotate_turret(rotation=1)
-    self.turret_degrees = self.turret_degrees + rotation
-    command.turret_heading = RTanque::Heading.new_from_degrees(self.turret_degrees)
+    command.turret_heading = sensors.turret_heading + RTanque::Heading.new_from_degrees(rotation)
   end
 
-  def turret_degrees
-    @turret_degrees ||= 0
-  end
-
-  def turret_degrees=(value)
-    value -= 360 if value > 360
-    @turret_degrees = value
+  def rotate_radar(rotation=1)
+    command.radar_heading = sensors.radar_heading + RTanque::Heading.new_from_degrees(rotation)
   end
 end
