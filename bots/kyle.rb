@@ -1,18 +1,9 @@
 class MyFirstBot < RTanque::Bot::Brain
-  NAME = 'my_first_bot'
+  NAME = 'kyle'
   include RTanque::Bot::BrainHelper
 
   def tick!
     ## main logic goes here
-    
-    # use self.sensors to detect things
-    # See http://rubydoc.info/github/awilliams/RTanque/master/RTanque/Bot/Sensors
-    #require 'debugger'
-    #debugger
-
-    #self.turret_degrees = self.turret_degrees + 1
-    #command.turret_heading = RTanque::Heading.new_from_degrees(turret_degrees)
-
     self.drive
 
     self.seek
@@ -22,12 +13,6 @@ class MyFirstBot < RTanque::Bot::Brain
     self.destroy
 
     self.print_info
-
-    # use self.command to control tank
-    # See http://rubydoc.info/github/awilliams/RTanque/master/RTanque/Bot/Command
-    
-    # self.arena contains the dimensions of the arena
-    # See http://rubydoc.info/github/awilliams/RTanque/master/frames/RTanque/Arena
   end
 
   def drive
