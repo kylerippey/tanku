@@ -3,9 +3,6 @@ class Kyle < RTanque::Bot::Brain
   include RTanque::Bot::BrainHelper
 
   def tick!
-    ## main logic goes here
-    #drive
-
     follow
 
     seek
@@ -22,15 +19,11 @@ class Kyle < RTanque::Bot::Brain
   def follow
     command.speed = 10
     if target
+      # TODO: Avoid running into walls like an idiot
       command.heading = target.heading
     else
       rotate_tank(4)
     end
-  end
-
-  def drive
-    command.speed = 10
-    rotate_tank(4)
   end
 
   def seek
@@ -58,9 +51,9 @@ class Kyle < RTanque::Bot::Brain
         1.5
       elsif target.distance < 125
         2.0
-      elsif target.distance < 200
+      elsif target.distance < 175
         3.0
-      elsif target.distance < 300
+      elsif target.distance < 250
         4.0
       else
         5.0
