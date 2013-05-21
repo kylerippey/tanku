@@ -4,7 +4,9 @@ class Kyle < RTanque::Bot::Brain
 
   def tick!
     ## main logic goes here
-    drive
+    #drive
+
+    follow
 
     seek
 
@@ -16,6 +18,15 @@ class Kyle < RTanque::Bot::Brain
   end
 
   protected
+
+  def follow
+    command.speed = 10
+    if target
+      command.heading = target.heading
+    else
+      rotate_tank(4)
+    end
+  end
 
   def drive
     command.speed = 10
@@ -40,10 +51,22 @@ class Kyle < RTanque::Bot::Brain
   end
 
   def fire_power_control
-    if target && target.distance < 100
-      3.0
+    if target
+      if target.distance < 75
+        1.0
+      elsif target.distance < 100
+        1.5
+      elsif target.distance < 125
+        2.0
+      elsif target.distance < 200
+        3.0
+      elsif target.distance < 300
+        4.0
+      else
+        5.0
+      end
     else
-      10.0
+      1.0
     end
   end
 
@@ -51,7 +74,7 @@ class Kyle < RTanque::Bot::Brain
     if target
       # Make sure we don't waste shots by firing before our turret can come around
       diff = sensors.turret_heading.delta(predicted_target_heading).abs
-      if diff < 6.0 * RTanque::Heading::ONE_DEGREE
+      if diff < 5.7 * RTanque::Heading::ONE_DEGREE
         command.fire(fire_power_control)
       end
     end
@@ -83,7 +106,7 @@ class Kyle < RTanque::Bot::Brain
         target_path = last_target_position.heading(new_target_position)
         distance_traveled = last_target_position.distance(new_target_position)
 
-        number_of_ticks = target.distance / fire_power_control / Math::PI
+        number_of_ticks = target.distance / (fire_power_control * 4.53)
 
         future_target_position = calculate_position(last_target_position, target_path, distance_traveled * number_of_ticks)
         our_future_position = calculate_position(sensors.position, sensors.heading, sensors.speed)
