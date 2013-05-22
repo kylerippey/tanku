@@ -1,5 +1,5 @@
-class Kyle < RTanque::Bot::Brain
-  NAME = 'kyle'
+class Crushinator < RTanque::Bot::Brain
+  NAME = 'Crushinator'
   include RTanque::Bot::BrainHelper
 
   def tick!
@@ -19,8 +19,12 @@ class Kyle < RTanque::Bot::Brain
   def follow
     command.speed = 10
     if target
-      # TODO: Avoid running into walls like an idiot
-      command.heading = target.heading
+      # Avoid running into walls like an idiot
+      if target_position.on_wall? && target.distance < 500
+        rotate_tank(4)
+      else
+        command.heading = target.heading
+      end
     else
       rotate_tank(4)
     end
@@ -45,7 +49,7 @@ class Kyle < RTanque::Bot::Brain
 
   def fire_power_control
     if target
-      if target.distance < 75
+      if target.distance < 70
         1.0
       elsif target.distance < 100
         1.5
