@@ -51,13 +51,13 @@ class Crushinator < RTanque::Bot::Brain
     if target
       if target.distance < 70
         1.0
-      elsif target.distance < 100
+      elsif target.distance < 95
         1.5
-      elsif target.distance < 125
+      elsif target.distance < 120
         2.0
-      elsif target.distance < 175
+      elsif target.distance < 160
         3.0
-      elsif target.distance < 250
+      elsif target.distance < 225
         4.0
       else
         5.0
